@@ -1,0 +1,270 @@
+==============================
+Data: 2026-02-19
+
+[09:54:09] INÍCIO DO TRABALHO
+[12:46:12] INÍCIO DA PAUSA
+[13:20:59] FIM DA PAUSA
+[13:20:59] INÍCIO DO TRABALHO
+[16:58:11] FINALIZAÇÃO DO DIA
+
+Resumo:
+Trabalho total: 06:29:15
+Pausa total:    00:34:46
+==============================
+
+==============================
+Data: 2026-02-20
+
+[08:39:21] INÍCIO DO TRABALHO
+[11:21:59] INÍCIO DA PAUSA
+[11:45:16] FIM DA PAUSA
+[11:45:16] INÍCIO DO TRABALHO
+[17:12:28] FINALIZAÇÃO DO DIA
+
+Resumo:
+Trabalho total: 08:09:50
+Pausa total:    00:23:17
+==============================
+
+==============================
+Data: 2026-02-23
+
+[09:49:47] INÍCIO DO TRABALHO
+[12:13:31] INÍCIO DA PAUSA
+[12:42:25] FIM DA PAUSA
+[12:42:25] INÍCIO DO TRABALHO
+[17:50:50] FINALIZAÇÃO DO DIA
+
+Resumo:
+Trabalho total: 07:32:09
+Pausa total:    00:28:53
+==============================
+
+==============================
+Data: 2026-02-26
+
+[09:14:57] INÍCIO DO TRABALHO
+[11:19:35] INÍCIO DA PAUSA
+[11:45:39] FIM DA PAUSA
+[11:45:39] INÍCIO DO TRABALHO
+[17:48:24] FINALIZAÇÃO DO DIA
+
+Resumo:
+Trabalho total: 08:07:22
+Pausa total:    00:26:04
+==============================
+
+==============================
+Data: 2026-02-27
+
+[09:22:11] INÍCIO DO TRABALHO
+[11:47:05] INÍCIO DA PAUSA
+[12:12:16] FIM DA PAUSA
+[12:12:16] INÍCIO DO TRABALHO
+[18:15:20] FINALIZAÇÃO DO DIA
+
+Resumo:
+Trabalho total: 08:27:57
+Pausa total:    00:25:11
+==============================
+
+==============================
+Data: 2026-03-04
+
+[08:29:24] INÍCIO DO TRABALHO
+[10:19:53] INÍCIO DA PAUSA
+[12:06:55] FIM DA PAUSA
+[12:06:55] INÍCIO DO TRABALHO
+[18:34:12] FINALIZAÇÃO DO DIA
+
+Resumo:
+Trabalho total: 08:17:46
+Pausa total:    01:47:01
+==============================
+
+==============================
+Data: 2026-03-05
+
+[09:15:33] INÍCIO DO TRABALHO
+[12:04:39] INÍCIO DA PAUSA
+[12:36:07] FIM DA PAUSA
+[12:36:07] INÍCIO DO TRABALHO
+[16:20:36] FINALIZAÇÃO DO DIA
+
+Resumo:
+Trabalho total: 06:33:35
+Pausa total:    00:31:27
+==============================
+
+==============================
+Data: 2026-03-06
+
+[09:23:49] INÍCIO DO TRABALHO
+[17:24:24] FINALIZAÇÃO DO DIA
+
+Resumo:
+Trabalho total: 08:00:35
+Pausa total:    00:00:00
+==============================
+
+==============================
+Data: 2026-03-10
+
+[08:49:18] INÍCIO DO TRABALHO
+[11:27:12] INÍCIO DA PAUSA
+[12:04:24] FIM DA PAUSA
+[12:04:24] INÍCIO DO TRABALHO
+[16:30:49] FINALIZAÇÃO DO DIA
+
+Resumo:
+Trabalho total: 07:04:18
+Pausa total:    00:37:12
+==============================
+
+==============================
+Data: 2026-03-11
+
+[09:02:33] INÍCIO DO TRABALHO
+[10:26:42] INÍCIO DA PAUSA
+[12:25:28] FIM DA PAUSA
+[12:25:28] INÍCIO DO TRABALHO
+[18:31:20] FINALIZAÇÃO DO DIA
+
+Resumo:
+Trabalho total: 07:30:00
+Pausa total:    01:58:46
+==============================
+
+==============================
+Data: 2026-03-12
+
+[09:15:42] INÍCIO DO TRABALHO
+[11:27:42] INÍCIO DA PAUSA
+[12:01:37] FIM DA PAUSA
+[12:01:37] INÍCIO DO TRABALHO
+[18:26:32] FINALIZAÇÃO DO DIA
+
+Resumo:
+Trabalho total: 08:36:54
+Pausa total:    00:33:55
+==============================
+
+Data: 17/03/2026
+
+[09:50:54] INÍCIO DO TRABALHO
+[11:33:51] INÍCIO DA PAUSA
+[12:12:07] FIM DA PAUSA
+[12:12:07] INÍCIO DO TRABALHO
+[16:28:57] FINALIZAÇÃO DO DIA
+
+Resumo:
+Trabalho total: 05:59:47
+Pausa total:    00:38:16
+==============================
+
+==============================
+Data: 18/03/2026
+
+[10:16:21] INÍCIO DO TRABALHO
+[11:42:09] INÍCIO DA PAUSA
+[12:08:31] FIM DA PAUSA
+[12:08:31] INÍCIO DO TRABALHO
+[18:54:24] FINALIZAÇÃO DO DIA
+
+Resumo:
+Trabalho total: 08:11:40
+Pausa total:    00:26:22
+==============================
+
+==============================
+Data: 19/03/2026
+
+[09:47:50] INÍCIO DO TRABALHO
+[12:14:28] INÍCIO DA PAUSA
+[12:51:55] FIM DA PAUSA
+[12:51:55] INÍCIO DO TRABALHO
+[16:33:25] FINALIZAÇÃO DO DIA
+
+Resumo:
+Trabalho total: 06:08:07
+Pausa total:    00:37:26
+==============================
+
+==============================
+Data: 20/03/2026
+
+[09:22:41] INÍCIO DO TRABALHO
+[11:56:58] INÍCIO DA PAUSA
+[12:28:36] FIM DA PAUSA
+[12:28:36] INÍCIO DO TRABALHO
+[17:57:26] FINALIZAÇÃO DO DIA
+
+Resumo:
+Trabalho total: 08:03:06
+Pausa total:    00:31:38
+==============================
+
+==============================
+Data: 25/03/2026
+
+[09:48:39] INÍCIO DO TRABALHO
+[10:37:53] INÍCIO DA PAUSA
+[13:04:00] FIM DA PAUSA
+[13:04:00] INÍCIO DO TRABALHO
+[18:55:09] FINALIZAÇÃO DO DIA
+
+Resumo:
+Trabalho total: 06:14:22
+Pausa total:    02:26:07
+==============================
+
+==============================
+Data: 26/03/2026
+
+[09:14:12] INÍCIO DO TRABALHO
+[11:41:14] INÍCIO DA PAUSA
+[12:13:01] FIM DA PAUSA
+[12:13:01] INÍCIO DO TRABALHO
+[16:32:19] FINALIZAÇÃO DO DIA
+
+Resumo:
+Trabalho total: 06:46:19
+Pausa total:    00:31:47
+==============================
+
+==============================
+Data: 27/03/2026
+
+[09:58:49] INÍCIO DO TRABALHO
+[18:58:56] FINALIZAÇÃO DO DIA
+
+Resumo:
+Trabalho total: 09:00:07
+Pausa total:    00:00:00
+==============================
+
+==============================
+Data: 30/03/2026
+
+[10:11:50] INÍCIO DO TRABALHO
+[18:50:42] FINALIZAÇÃO DO DIA
+
+Resumo:
+Trabalho total: 08:38:52
+Pausa total:    00:00:00
+==============================
+
+==============================
+Data: 31/03/2026
+
+[09:58:14] INÍCIO DO TRABALHO
+[12:38:30] INÍCIO DA PAUSA
+[13:07:56] FIM DA PAUSA
+[13:07:56] INÍCIO DO TRABALHO
+[18:24:52] FINALIZAÇÃO DO DIA
+
+Resumo:
+Trabalho total: 07:57:11
+Pausa total:    00:29:25
+==============================
+
