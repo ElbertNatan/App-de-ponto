@@ -35,6 +35,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 EXCEL_PATH = SCRIPT_DIR / "folha_ponto.xlsx"
 META_DIARIA = timedelta(hours=8)
 TIPOS_NEUTRALIZA_META = ("FERIADO", "ATESTADO", "FOLGA")
+AUTOSAVE_INTERVALO_MS = 10 * 60 * 1000  # 10 min
 
 
 def dias_uteis_no_mes(ano, mes):
@@ -880,6 +881,7 @@ class FolhaPontoApp:
         self._carregar_dia_vis()
         self.atualizar_tempo()
         self.atualizar_visoes()
+        self.root.after(AUTOSAVE_INTERVALO_MS, self._autosave_hoje)
 
     def _dia_vazio(self):
         return {
@@ -1838,6 +1840,20 @@ class FolhaPontoApp:
     def atualizar_tempo(self):
         self._atualizar_timer_para_dia_vis()
         self.root.after(1000, self.atualizar_tempo)
+
+    def _autosave_hoje(self):
+        try:
+            d = self.hoje_dia
+            if self.store and d.get("inicio") and not d.get("fim"):
+                self.store.salvar_dia(
+                    date.today(),
+                    d["inicio"], d["ini_pausa"], d["fim_pausa"], d["fim"],
+                    d.get("tipo", "NORMAL"), d.get("obs", ""),
+                )
+        except Exception as e:
+            print(f"Auto-save falhou: {e}")
+        finally:
+            self.root.after(AUTOSAVE_INTERVALO_MS, self._autosave_hoje)
 
     def _atualizar_timer_para_dia_vis(self):
         d = self.dia_vis
