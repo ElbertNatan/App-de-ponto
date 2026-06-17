@@ -1243,18 +1243,24 @@ class FolhaPontoApp:
         f = self.tab_dia
 
         # ---- Header com carrossel ----
-        hdr = tk.Frame(f, bg=COR_CARD)
+        # place() em cada bloco: prev colado na borda esquerda, right_group
+        # colado na direita, e a data no centro geometrico do hdr
+        # (relx=0.5, anchor="center"). Como hdr ocupa toda a largura util da
+        # aba (pack fill="x"), o centro do hdr coincide com o centro
+        # horizontal da janela.
+        hdr = tk.Frame(f, bg=COR_CARD, height=64)
         hdr.pack(fill="x", padx=24, pady=(18, 4))
+        hdr.pack_propagate(False)
 
         self.btn_prev_dia = HoverButton(
             hdr, text="◀", bg=COR_CARD, hover_bg=COR_HOVER, fg=COR_PRIMARY,
             font=("Segoe UI", 16, "bold"), padx=14, pady=4,
             command=lambda: self.navegar_dia(-1),
         )
-        self.btn_prev_dia.pack(side="left")
+        self.btn_prev_dia.place(relx=0, rely=0.5, anchor="w")
 
         centro = tk.Frame(hdr, bg=COR_CARD)
-        centro.pack(side="left", expand=True, fill="x")
+        centro.place(relx=0.5, rely=0.5, anchor="center")
         self.lbl_data_principal = tk.Label(
             centro, text="", bg=COR_CARD, fg=COR_TEXT,
             font=("Segoe UI Semibold", 15),
@@ -1266,18 +1272,20 @@ class FolhaPontoApp:
         )
         self.lbl_data_sub.pack(pady=(2, 0))
 
-        self.btn_next_dia = HoverButton(
-            hdr, text="▶", bg=COR_CARD, hover_bg=COR_HOVER, fg=COR_PRIMARY,
-            font=("Segoe UI", 16, "bold"), padx=14, pady=4,
-            command=lambda: self.navegar_dia(1),
-        )
-        self.btn_next_dia.pack(side="right")
+        right_group = tk.Frame(hdr, bg=COR_CARD)
+        right_group.place(relx=1, rely=0.5, anchor="e")
         self.btn_hoje = HoverButton(
-            hdr, text="● Hoje", bg=COR_PRIMARY_LIGHT, hover_bg="#c7d2fe",
+            right_group, text="● Hoje", bg=COR_PRIMARY_LIGHT, hover_bg="#c7d2fe",
             fg=COR_PRIMARY_TEXT, font=("Segoe UI", 9, "bold"),
             padx=12, pady=6, command=self.ir_para_hoje,
         )
-        self.btn_hoje.pack(side="right", padx=10)
+        self.btn_hoje.pack(side="left", padx=(0, 10))
+        self.btn_next_dia = HoverButton(
+            right_group, text="▶", bg=COR_CARD, hover_bg=COR_HOVER, fg=COR_PRIMARY,
+            font=("Segoe UI", 16, "bold"), padx=14, pady=4,
+            command=lambda: self.navegar_dia(1),
+        )
+        self.btn_next_dia.pack(side="left")
 
         # ---- Timer grande + progresso ----
         timer_wrap = tk.Frame(f, bg=COR_CARD)
