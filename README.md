@@ -1,7 +1,9 @@
 # Folha de Ponto
 
-Aplicativo desktop em Python (Tkinter) para controle de horas trabalhadas, com
-banco de horas, exportação para Excel e interface moderna em abas.
+Aplicativo desktop em Python (Tkinter + Pillow) para controle de horas
+trabalhadas, com banco de horas, exportação para Excel e UI moderna —
+cards com cantos arredondados, sombras suaves, botões custom desenhados
+em Canvas e ícone próprio na barra de tarefas.
 
 ---
 
@@ -31,14 +33,22 @@ banco de horas, exportação para Excel e interface moderna em abas.
 - **Python 3.10+** (testado em 3.14) — disponível em <https://www.python.org/downloads/>.
 - **Tkinter** — já vem com a instalação padrão do Python no Windows.
 - **openpyxl** — para gravar a planilha `.xlsx`.
+- **Pillow** — usado para renderizar cantos arredondados, sombras suaves
+  nos cards e o ícone do app em múltiplas resoluções (16-256 px).
 
 ### Instalação das dependências
 
 ```powershell
-pip install openpyxl
+pip install openpyxl Pillow
 ```
 
-> Se o `pip` não estiver no PATH, use `python -m pip install openpyxl`.
+> Se o `pip` não estiver no PATH, use `python -m pip install openpyxl Pillow`.
+>
+> O Pillow é opcional do ponto de vista funcional — sem ele a aba *Dia*
+> sobe normalmente, mas os widgets caem para retângulos simples sem
+> arredondamento/sombra. O ícone também precisa de Pillow para ser
+> gerado (`folha_ponto.ico` já vem no repositório, então só é necessário
+> reinstalar a Pillow se quiser regerar o ícone).
 
 ---
 
@@ -47,16 +57,16 @@ pip install openpyxl
 ### Opção 1 — Atalho `.bat` (recomendado no Windows)
 
 Dê duplo clique em `executavel.bat`. Ele inicia o app via `pythonw` (sem abrir
-janela de console).
+janela de console) apontando para `src\folha_ponto.py`.
 
 ### Opção 2 — Linha de comando
 
 ```powershell
-python folha_ponto.py
+python src\folha_ponto.py
 ```
 
-Na primeira execução, qualquer arquivo `ponto_AAAA_MM.txt` presente na pasta é
-migrado automaticamente para o `folha_ponto.xlsx`.
+Na primeira execução, qualquer arquivo `ponto_AAAA_MM.txt` presente em `data/`
+é migrado automaticamente para `data\folha_ponto.xlsx`.
 
 ---
 
@@ -64,15 +74,20 @@ migrado automaticamente para o `folha_ponto.xlsx`.
 
 ```
 App ponto/
-├── folha_ponto.py        # Aplicativo principal (Tkinter)
-├── executavel.bat        # Atalho Windows que dispara pythonw
-├── folha_ponto.xlsx      # Planilha gerada/atualizada pelo app (não versionada)
-├── ponto_AAAA_MM.txt     # Backup mensal em texto (não versionado)
-└── README.md
+├── executavel.bat        # Atalho Windows que dispara pythonw src/folha_ponto.py
+├── README.md
+├── .gitignore
+├── src/                  # Codigo-fonte + assets versionados
+│   ├── folha_ponto.py    # Aplicativo principal (Tkinter + Pillow)
+│   └── folha_ponto.ico   # Icone do app (10 tamanhos, 16-256 px)
+└── data/                 # Dados gerados pelo usuario (NAO versionados)
+    ├── folha_ponto.xlsx  # Planilha de horas
+    └── ponto_AAAA_MM.txt # Backup mensal em texto
 ```
 
-> Os arquivos `*.xlsx`, `*.txt` e `__pycache__/` ficam no `.gitignore` — são
+> A pasta `data/` inteira e `__pycache__/` ficam no `.gitignore` — são
 > dados pessoais de quem usa o app, não devem entrar no repositório.
+> O app cria `data/` automaticamente na primeira execução.
 
 ---
 
@@ -111,11 +126,18 @@ Pausa total:    00:25:12
 ## Banco de horas
 
 - **Meta diária**: 8 horas em dias úteis.
+- **Meta do mês**: `8h × (dias úteis do mês inteiro)`, independente de já
+  ter ocorrido ou não — assim a Meta exibida já reflete o total esperado
+  do mês desde o dia 1.
 - **Saldo do dia** = `Trabalho - Meta`.
-- Dias do tipo **FERIADO**, **ATESTADO** ou **FOLGA** zeram a meta — saldo do
-  dia fica neutro.
+- Dias do tipo **FERIADO**, **ATESTADO** ou **FOLGA** zeram a meta do dia
+  (saldo neutro) e, na soma do mês, contam como 8h "creditadas" para que
+  `Trabalho - Meta` continue batendo com a soma dos saldos diários.
 - **Saldo acumulado** = soma dos saldos diários, mês a mês, exibido na aba
   *Banco geral* e na aba *Resumo* do Excel.
+- **Auto-save**: o estado do dia é gravado no `folha_ponto.xlsx` a cada
+  10 minutos após o início do dia, então um desligamento inesperado não
+  perde mais do que esse intervalo.
 
 ---
 

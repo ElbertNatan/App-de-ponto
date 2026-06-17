@@ -1,3 +1,3 @@
 @echo off
-start pythonw "folha_ponto.py"
+start "" pythonw "%~dp0src\folha_ponto.py"
 exit

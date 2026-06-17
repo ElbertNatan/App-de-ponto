@@ -28,11 +28,24 @@ try:
 except ImportError:
     OPENPYXL_OK = False
 
+try:
+    from PIL import Image, ImageDraw, ImageFilter, ImageTk
+    PIL_OK = True
+except ImportError:
+    PIL_OK = False
+
+
+def _hex_para_rgb(hex_color):
+    h = hex_color.lstrip("#")
+    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
 
 # ---------- Constantes ----------
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-EXCEL_PATH = SCRIPT_DIR / "folha_ponto.xlsx"
+DATA_DIR = SCRIPT_DIR.parent / "data"
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+EXCEL_PATH = DATA_DIR / "folha_ponto.xlsx"
 ICONE_PATH = SCRIPT_DIR / "folha_ponto.ico"
 APP_USER_MODEL_ID = "folha.ponto.desktop.app"
 META_DIARIA = timedelta(hours=8)
@@ -761,36 +774,222 @@ def calcular_saldos(store):
 
 # ---------- Widgets custom ----------
 
-class HoverButton(tk.Button):
-    """tk.Button com hover real (muda bg quando o mouse entra)."""
+class HoverButton(tk.Canvas):
+    """Botao com cantos arredondados desenhado via Canvas + Pillow.
+    Mantem a API do antigo tk.Button-based HoverButton (config bg/fg/text/state,
+    set_palette, grid/pack/bind) para nao quebrar callsites."""
 
     def __init__(self, master, bg=COR_PRIMARY, hover_bg=COR_PRIMARY_HOVER,
                  fg="white", font=("Segoe UI", 10, "bold"),
-                 padx=16, pady=9, **kwargs):
-        kwargs.setdefault("relief", "flat")
-        kwargs.setdefault("borderwidth", 0)
-        kwargs.setdefault("cursor", "hand2")
-        super().__init__(
-            master, bg=bg, fg=fg, font=font, padx=padx, pady=pady,
-            activebackground=hover_bg, activeforeground=fg, **kwargs,
-        )
+                 padx=18, pady=10, radius=12, text="", command=None,
+                 parent_bg=None, **kwargs):
         self._bg_normal = bg
         self._bg_hover = hover_bg
         self._fg_normal = fg
+        self._text = text
+        self._font = font
+        self._padx = padx
+        self._pady = pady
+        self._radius = radius
+        self._command = command
+        self._state = "normal"
+        self._parent_bg = parent_bg or self._inferir_parent_bg(master)
+        self._photo = None
+
+        import tkinter.font as tkfont
+        tkf = tkfont.Font(font=font)
+        tw = tkf.measure(text or " ")
+        th = tkf.metrics("linespace")
+        w = tw + 2 * padx
+        h = th + 2 * pady
+
+        kwargs.pop("relief", None)
+        kwargs.pop("borderwidth", None)
+        kwargs.setdefault("cursor", "hand2")
+        kwargs.setdefault("highlightthickness", 0)
+        kwargs.setdefault("bd", 0)
+        super().__init__(master, width=w, height=h, bg=self._parent_bg, **kwargs)
+
+        self._redesenhar(self._bg_normal)
         self.bind("<Enter>", self._on_enter)
         self.bind("<Leave>", self._on_leave)
+        self.bind("<Button-1>", self._on_press)
+        self.bind("<ButtonRelease-1>", self._on_release)
+
+    @staticmethod
+    def _inferir_parent_bg(master):
+        try:
+            return master.cget("bg")
+        except tk.TclError:
+            return COR_BG
+
+    def _redesenhar(self, cor_fundo):
+        w = int(self.cget("width"))
+        h = int(self.cget("height"))
+        if w < 2 or h < 2:
+            return
+        if PIL_OK:
+            base_rgb = _hex_para_rgb(self._parent_bg)
+            img = Image.new("RGBA", (w, h), base_rgb + (255,))
+            d = ImageDraw.Draw(img)
+            cor = cor_fundo if self._state == "normal" else COR_DISABLED
+            d.rounded_rectangle(
+                (0, 0, w - 1, h - 1), radius=self._radius,
+                fill=_hex_para_rgb(cor) + (255,),
+            )
+            self._photo = ImageTk.PhotoImage(img)
+            self.delete("all")
+            self.create_image(0, 0, image=self._photo, anchor="nw")
+        else:
+            self.delete("all")
+            cor = cor_fundo if self._state == "normal" else COR_DISABLED
+            self.create_rectangle(0, 0, w, h, fill=cor, outline="")
+        fg = self._fg_normal if self._state == "normal" else "white"
+        self.create_text(
+            w / 2, h / 2, text=self._text, fill=fg, font=self._font,
+        )
 
     def _on_enter(self, _ev):
-        if str(self["state"]) != "disabled":
-            self.config(bg=self._bg_hover)
+        if self._state == "normal":
+            self._redesenhar(self._bg_hover)
 
     def _on_leave(self, _ev):
-        self.config(bg=self._bg_normal)
+        if self._state == "normal":
+            self._redesenhar(self._bg_normal)
+
+    def _on_press(self, _ev):
+        if self._state == "normal":
+            self._redesenhar(self._bg_hover)
+
+    def _on_release(self, ev):
+        if self._state != "normal":
+            return
+        self._redesenhar(self._bg_normal)
+        if 0 <= ev.x <= int(self.cget("width")) and 0 <= ev.y <= int(self.cget("height")):
+            if self._command:
+                self._command()
+
+    def config(self, cnf=None, **kwargs):
+        if cnf:
+            kwargs = {**cnf, **kwargs}
+        precisa_redraw = False
+        if "text" in kwargs:
+            self._text = kwargs.pop("text")
+            precisa_redraw = True
+        if "fg" in kwargs:
+            self._fg_normal = kwargs.pop("fg")
+            precisa_redraw = True
+        if "bg" in kwargs:
+            self._bg_normal = kwargs.pop("bg")
+            precisa_redraw = True
+        if "state" in kwargs:
+            self._state = kwargs.pop("state")
+            super().configure(cursor="hand2" if self._state == "normal" else "arrow")
+            precisa_redraw = True
+        if "command" in kwargs:
+            self._command = kwargs.pop("command")
+        if kwargs:
+            super().configure(**kwargs)
+        if precisa_redraw:
+            self._redesenhar(self._bg_normal)
+
+    configure = config
+
+    def __getitem__(self, key):
+        if key == "state":
+            return self._state
+        return super().__getitem__(key)
 
     def set_palette(self, bg, hover_bg):
         self._bg_normal = bg
         self._bg_hover = hover_bg
-        self.config(bg=bg, activebackground=hover_bg)
+        self._redesenhar(self._bg_normal)
+
+
+class RoundedCard(tk.Frame):
+    """Frame com fundo arredondado (e sombra suave opcional) desenhado via Pillow.
+    Use `card.content` para colocar widgets dentro (igual a um tk.Frame normal)."""
+
+    def __init__(self, master, bg=None, parent_bg=None,
+                 radius=14, shadow=True, padding=0, border=True, **kwargs):
+        bg = bg or COR_CARD
+        parent_bg = parent_bg or self._inferir_parent_bg(master)
+        kwargs.pop("bg", None)
+        super().__init__(master, bg=parent_bg, **kwargs)
+        self._bg = bg
+        self._parent_bg = parent_bg
+        self._radius = radius
+        self._shadow = shadow
+        self._border = border
+        self._photo = None
+        self._last_size = (0, 0)
+
+        self._canvas = tk.Canvas(
+            self, bg=parent_bg, highlightthickness=0, bd=0,
+        )
+        self._canvas.place(x=0, y=0, relwidth=1, relheight=1)
+        self.content = tk.Frame(self, bg=bg)
+        m = padding + (4 if shadow else 0)
+        self.content.place(
+            x=m, y=m,
+            relwidth=1, relheight=1,
+            width=-2 * m, height=-2 * m,
+        )
+        self.bind("<Configure>", self._on_resize)
+
+    @staticmethod
+    def _inferir_parent_bg(master):
+        try:
+            return master.cget("bg")
+        except tk.TclError:
+            return COR_BG
+
+    def _on_resize(self, _ev):
+        self._redesenhar()
+
+    def _redesenhar(self):
+        w = self.winfo_width()
+        h = self.winfo_height()
+        if w < 4 or h < 4 or (w, h) == self._last_size:
+            return
+        self._last_size = (w, h)
+        if not PIL_OK:
+            self._canvas.delete("all")
+            self._canvas.create_rectangle(0, 0, w, h, fill=self._bg, outline="")
+            return
+        base = Image.new("RGBA", (w, h), _hex_para_rgb(self._parent_bg) + (255,))
+        if self._shadow:
+            sombra = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+            ds = ImageDraw.Draw(sombra)
+            offset = 4
+            ds.rounded_rectangle(
+                (offset, offset + 2, w - offset, h - offset + 1),
+                radius=self._radius, fill=(15, 23, 42, 38),
+            )
+            sombra = sombra.filter(ImageFilter.GaussianBlur(6))
+            base = Image.alpha_composite(base, sombra)
+        topo = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        dt = ImageDraw.Draw(topo)
+        margem = 4 if self._shadow else 0
+        if self._border:
+            dt.rounded_rectangle(
+                (margem, margem, w - margem - 1, h - margem - 1),
+                radius=self._radius, fill=_hex_para_rgb(COR_BORDER) + (255,),
+            )
+            dt.rounded_rectangle(
+                (margem + 1, margem + 1, w - margem - 2, h - margem - 2),
+                radius=max(0, self._radius - 1),
+                fill=_hex_para_rgb(self._bg) + (255,),
+            )
+        else:
+            dt.rounded_rectangle(
+                (margem, margem, w - margem - 1, h - margem - 1),
+                radius=self._radius, fill=_hex_para_rgb(self._bg) + (255,),
+            )
+        base = Image.alpha_composite(base, topo)
+        self._photo = ImageTk.PhotoImage(base)
+        self._canvas.delete("all")
+        self._canvas.create_image(0, 0, image=self._photo, anchor="nw")
 
 
 def mostrar_toast(root, mensagem, cor=COR_SUCCESS, duracao=2200):
@@ -909,7 +1108,7 @@ class FolhaPontoApp:
         }
 
     def _migrar_txts_iniciais(self):
-        arquivos = sorted(SCRIPT_DIR.glob("ponto_*.txt"))
+        arquivos = sorted(DATA_DIR.glob("ponto_*.txt"))
         if not arquivos:
             return
         dias = []
@@ -932,16 +1131,21 @@ class FolhaPontoApp:
             style.theme_use("clam")
         except tk.TclError:
             pass
-        style.configure("TNotebook", background=COR_BG, borderwidth=0)
         style.configure(
-            "TNotebook.Tab", padding=[20, 10],
+            "TNotebook", background=COR_BG, borderwidth=0,
+            tabmargins=[12, 6, 12, 0],
+        )
+        style.configure(
+            "TNotebook.Tab", padding=[26, 12],
             font=("Segoe UI", 10, "bold"),
-            background="#e9ecef", foreground=COR_TEXT, borderwidth=0,
+            background=COR_BG, foreground=COR_MUTED, borderwidth=0,
+            focuscolor=COR_BG,
         )
         style.map(
             "TNotebook.Tab",
-            background=[("selected", COR_CARD)],
-            foreground=[("selected", COR_PRIMARY)],
+            background=[("selected", COR_CARD), ("active", COR_HOVER)],
+            foreground=[("selected", COR_PRIMARY), ("active", COR_TEXT)],
+            expand=[("selected", [1, 1, 1, 0])],
         )
         style.configure("TFrame", background=COR_BG)
         style.configure("Card.TFrame", background=COR_CARD)
@@ -962,11 +1166,17 @@ class FolhaPontoApp:
         )
         style.configure(
             "Treeview", background=COR_CARD, foreground=COR_TEXT,
-            fieldbackground=COR_CARD, font=("Segoe UI", 10), rowheight=32, borderwidth=0,
+            fieldbackground=COR_CARD, font=("Segoe UI", 10),
+            rowheight=36, borderwidth=0,
         )
         style.configure(
-            "Treeview.Heading", background=COR_PRIMARY, foreground="white",
-            font=("Segoe UI", 9, "bold"), borderwidth=0, padding=8,
+            "Treeview.Heading", background=COR_HOVER, foreground=COR_TEXT_SOFT,
+            font=("Segoe UI", 9, "bold"), borderwidth=0, padding=10,
+            relief="flat",
+        )
+        style.map(
+            "Treeview.Heading",
+            background=[("active", COR_BORDER)],
         )
         style.map(
             "Treeview",
@@ -1229,9 +1439,13 @@ class FolhaPontoApp:
         arr.grid(row=0, column=col, sticky="s", pady=(18, 0))
 
     def _make_status_card(self, parent, label, valor, cor_valor):
-        cf = tk.Frame(parent, bg=COR_CARD,
-                      highlightthickness=1, highlightbackground=COR_BORDER)
-        inner = tk.Frame(cf, bg=COR_CARD, padx=22, pady=10)
+        try:
+            parent_bg = parent.cget("bg")
+        except tk.TclError:
+            parent_bg = COR_CARD
+        cf = RoundedCard(parent, bg=COR_CARD, parent_bg=parent_bg, radius=12)
+        cf.configure(width=160, height=82)
+        inner = tk.Frame(cf.content, bg=COR_CARD, padx=22, pady=12)
         inner.pack()
         val = tk.Label(
             inner, text=valor, bg=COR_CARD, fg=cor_valor,
@@ -1246,16 +1460,20 @@ class FolhaPontoApp:
         return {"frame": cf, "value": val, "label": lbl}
 
     def _make_status_pill(self, parent, label, valor, cor_valor):
-        cf = tk.Frame(parent, bg=COR_CARD,
-                      highlightthickness=1, highlightbackground=COR_BORDER)
-        inner = tk.Frame(cf, bg=COR_CARD, padx=22, pady=10)
+        try:
+            parent_bg = parent.cget("bg")
+        except tk.TclError:
+            parent_bg = COR_CARD
+        cf = RoundedCard(parent, bg=COR_CARD, parent_bg=parent_bg, radius=12)
+        cf.configure(width=160, height=82)
+        inner = tk.Frame(cf.content, bg=COR_CARD, padx=22, pady=10)
         inner.pack()
         # Pill colorida com valor
         pill = tk.Frame(inner, bg=cor_valor)
         pill.pack()
         val = tk.Label(
             pill, text=valor, bg=cor_valor, fg="white",
-            font=("Segoe UI", 11, "bold"), padx=12, pady=4,
+            font=("Segoe UI", 11, "bold"), padx=14, pady=5,
         )
         val.pack()
         lbl = tk.Label(
@@ -1454,18 +1672,26 @@ class FolhaPontoApp:
         )
 
     def _mini_card(self, parent, label, valor, cor_valor):
-        cf = tk.Frame(parent, bg=COR_CARD,
-                      highlightthickness=1, highlightbackground=COR_BORDER)
-        inner = tk.Frame(cf, bg=COR_CARD, padx=16, pady=12)
+        try:
+            parent_bg = parent.cget("bg")
+        except tk.TclError:
+            parent_bg = COR_CARD
+        cf = RoundedCard(
+            parent, bg=COR_CARD, parent_bg=parent_bg,
+            radius=14, shadow=True,
+        )
+        # altura proporcional ao conteudo - garante render correto antes do .grid
+        cf.configure(height=98)
+        inner = tk.Frame(cf.content, bg=COR_CARD, padx=18, pady=14)
         inner.pack(fill="both", expand=True)
         lbl_lbl = tk.Label(
             inner, text=label.upper(), bg=COR_CARD, fg=COR_MUTED,
-            font=("Segoe UI", 8, "bold"),
+            font=("Segoe UI", 8, "bold"), anchor="w",
         )
         lbl_lbl.pack(anchor="w")
         lbl_val = tk.Label(
             inner, text=valor, bg=COR_CARD, fg=cor_valor,
-            font=("Consolas", 18, "bold"),
+            font=("Consolas", 18, "bold"), anchor="w",
         )
         lbl_val.pack(anchor="w", pady=(4, 0))
         return {"frame": cf, "value": lbl_val, "label": lbl_lbl}
@@ -1699,7 +1925,7 @@ class FolhaPontoApp:
         if not self.hoje_eventos:
             return
         agora = datetime.now()
-        nome_txt = SCRIPT_DIR / agora.strftime("ponto_%Y_%m.txt")
+        nome_txt = DATA_DIR / agora.strftime("ponto_%Y_%m.txt")
         d = self.hoje_dia
         trab, pausa = calcular_trab_pausa(d["inicio"], d["ini_pausa"], d["fim_pausa"], d["fim"])
         try:
