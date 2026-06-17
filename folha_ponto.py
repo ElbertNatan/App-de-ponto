@@ -849,6 +849,20 @@ class FolhaPontoApp:
 
         # Estado "ao vivo" do dia atual (cronometro)
         self.hoje_dia = self._dia_vazio()
+        if self.store:
+            try:
+                d_salvo = self.store.get_dia(date.today())
+                if d_salvo:
+                    self.hoje_dia = {
+                        "inicio": d_salvo["inicio"],
+                        "ini_pausa": d_salvo["ini_pausa"],
+                        "fim_pausa": d_salvo["fim_pausa"],
+                        "fim": d_salvo["fim"],
+                        "tipo": d_salvo["tipo"],
+                        "obs": d_salvo["obs"],
+                    }
+            except Exception as e:
+                print(f"Erro restaurando estado de hoje: {e}")
         self.hoje_eventos = []
         # Dia atualmente visualizado/editado na aba Dia
         self.data_vis = date.today()
