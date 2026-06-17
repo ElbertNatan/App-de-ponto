@@ -13,6 +13,7 @@ Recursos:
   - Banco de horas: meta 8h em dias uteis; FERIADO/ATESTADO/FOLGA neutralizam
 """
 
+import calendar
 import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime, timedelta, date, time as dtime
@@ -33,6 +34,12 @@ except ImportError:
 SCRIPT_DIR = Path(__file__).resolve().parent
 EXCEL_PATH = SCRIPT_DIR / "folha_ponto.xlsx"
 META_DIARIA = timedelta(hours=8)
+TIPOS_NEUTRALIZA_META = ("FERIADO", "ATESTADO", "FOLGA")
+
+
+def dias_uteis_no_mes(ano, mes):
+    _, ultimo = calendar.monthrange(ano, mes)
+    return sum(1 for d in range(1, ultimo + 1) if date(ano, mes, d).weekday() < 5)
 
 SHEET_RESUMO = "Resumo"
 SHEET_MARCACOES = "Marcacoes"
@@ -533,9 +540,15 @@ class ExcelStore:
                 tipo_cell.font = Font(bold=True)
 
         normais = [r for r in rows if (r[COL_TIPO - 1] or "NORMAL") == "NORMAL"]
-        soma_trab = sum((str_to_td(r[COL_TRABALHO - 1]) for r in normais), timedelta())
+        neutros = [r for r in rows if (r[COL_TIPO - 1] or "NORMAL") in TIPOS_NEUTRALIZA_META]
+        soma_trab_normal = sum((str_to_td(r[COL_TRABALHO - 1]) for r in normais), timedelta())
         soma_pausa = sum((str_to_td(r[COL_PAUSA - 1]) for r in normais), timedelta())
-        soma_meta = META_DIARIA * len(normais)
+        soma_trab = soma_trab_normal + META_DIARIA * len(neutros)
+        try:
+            ano_aba, mes_aba = (int(x) for x in ws.title.split("-"))
+            soma_meta = META_DIARIA * dias_uteis_no_mes(ano_aba, mes_aba)
+        except (ValueError, AttributeError):
+            soma_meta = META_DIARIA * len(normais)
         soma_saldo = soma_trab - soma_meta
         total_row = len(rows) + 2
         totais = {
@@ -642,7 +655,9 @@ class ExcelStore:
                 if tipo == "NORMAL":
                     soma_trab += str_to_td(row[COL_TRABALHO - 1])
                     dias += 1
-            soma_meta = META_DIARIA * dias
+                elif tipo in TIPOS_NEUTRALIZA_META:
+                    soma_trab += META_DIARIA
+            soma_meta = META_DIARIA * dias_uteis_no_mes(a, m)
             saldo_mes = soma_trab - soma_meta
             acumulado += saldo_mes
             valores = [
@@ -1896,10 +1911,13 @@ class FolhaPontoApp:
                     tags.append("falta")
                 elif tipo == "FERIADO":
                     tags.append("feriado")
+                    soma_trab += META_DIARIA
                 elif tipo == "ATESTADO":
                     tags.append("atestado")
+                    soma_trab += META_DIARIA
                 elif tipo == "FOLGA":
                     tags.append("folga")
+                    soma_trab += META_DIARIA
                 elif tipo == "EXTRA":
                     tags.append("extra")
                 if e["data"] == hoje:
@@ -1919,7 +1937,7 @@ class FolhaPontoApp:
                     td_to_str(e["saldo"]),
                     tipo,
                 ), tags=tags)
-            soma_meta = META_DIARIA * soma_dias
+            soma_meta = META_DIARIA * dias_uteis_no_mes(hoje.year, hoje.month)
             self._set_card(self.card_trab_mes, td_to_str(soma_trab))
             self._set_card(self.card_meta_mes, td_to_str(soma_meta))
             self._set_card(
@@ -1938,8 +1956,10 @@ class FolhaPontoApp:
             for a, m in meses:
                 dias = self.store.listar_dias_do_mes(a, m)
                 normais = [d for d in dias if d["tipo"] == "NORMAL"]
+                neutros = [d for d in dias if d["tipo"] in TIPOS_NEUTRALIZA_META]
                 trab = sum((d["trabalho"] for d in normais), timedelta())
-                meta = META_DIARIA * len(normais)
+                trab += META_DIARIA * len(neutros)
+                meta = META_DIARIA * dias_uteis_no_mes(a, m)
                 saldo_m = trab - meta
                 acumulado += saldo_m
                 total_trab += trab
