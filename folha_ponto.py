@@ -33,6 +33,8 @@ except ImportError:
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 EXCEL_PATH = SCRIPT_DIR / "folha_ponto.xlsx"
+ICONE_PATH = SCRIPT_DIR / "folha_ponto.ico"
+APP_USER_MODEL_ID = "folha.ponto.desktop.app"
 META_DIARIA = timedelta(hours=8)
 TIPOS_NEUTRALIZA_META = ("FERIADO", "ATESTADO", "FOLGA")
 AUTOSAVE_INTERVALO_MS = 10 * 60 * 1000  # 10 min
@@ -834,6 +836,7 @@ class FolhaPontoApp:
         self.root.minsize(780, 660)
         self.root.attributes("-topmost", True)
         self.root.after(800, lambda: self.root.attributes("-topmost", False))
+        self._aplicar_icone()
 
         self.store = None
         if OPENPYXL_OK:
@@ -882,6 +885,22 @@ class FolhaPontoApp:
         self.atualizar_tempo()
         self.atualizar_visoes()
         self.root.after(AUTOSAVE_INTERVALO_MS, self._autosave_hoje)
+
+    def _aplicar_icone(self):
+        # Windows: forca AppUserModelID antes pra que a barra de tarefas
+        # use o icone do app em vez do icone do interpretador Python.
+        try:
+            import ctypes
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
+                APP_USER_MODEL_ID
+            )
+        except Exception:
+            pass
+        if ICONE_PATH.exists():
+            try:
+                self.root.iconbitmap(default=str(ICONE_PATH))
+            except Exception as e:
+                print(f"Falha ao carregar icone: {e}")
 
     def _dia_vazio(self):
         return {
@@ -2025,6 +2044,16 @@ class FolhaPontoApp:
 
 
 if __name__ == "__main__":
+    # AppUserModelID precisa ser setado ANTES de criar a janela para que a
+    # barra de tarefas do Windows associe o icone do app (em vez do icone
+    # do interpretador Python).
+    try:
+        import ctypes
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
+            APP_USER_MODEL_ID
+        )
+    except Exception:
+        pass
     root = tk.Tk()
     app = FolhaPontoApp(root)
     root.mainloop()
