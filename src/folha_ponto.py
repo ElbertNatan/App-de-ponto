@@ -319,6 +319,12 @@ def parse_blocos_txt(path):
 class ExcelStore:
     def __init__(self, path):
         self.path = Path(path)
+        # Workbook em cache na memoria: carregar o .xlsx (com estilos) custa
+        # ~800ms; sem cache cada salvar/finalizar recarregava o arquivo varias
+        # vezes. Mantemos uma unica copia viva e so recarregamos se o arquivo
+        # mudar por fora (ex.: editado direto no Excel) — ver _get_wb.
+        self._wb = None
+        self._mtime = None
         if not self.path.exists():
             self._criar_inicial()
 
@@ -330,6 +336,8 @@ class ExcelStore:
         ws2 = wb.create_sheet(SHEET_MARCACOES)
         self._setup_header(ws2, HEADERS_MARC, [14, 14, 40])
         wb.save(self.path)
+        self._wb = wb
+        self._mtime = self.path.stat().st_mtime
 
     def _setup_header(self, ws, headers, widths):
         for col, h in enumerate(headers, 1):
@@ -343,18 +351,30 @@ class ExcelStore:
             ws.column_dimensions[get_column_letter(i)].width = w
         ws.freeze_panes = "A2"
 
+    def _get_wb(self):
+        """Retorna o workbook em cache. So recarrega do disco se o arquivo
+        mudou por fora desde a ultima vez que o abrimos/salvamos (ex.: o
+        usuario editou o .xlsx no Excel). Assim leituras e gravacoes
+        sucessivas reaproveitam a mesma copia em memoria."""
+        atual = self.path.stat().st_mtime if self.path.exists() else None
+        if self._wb is None or atual != self._mtime:
+            self._wb = load_workbook(self.path)
+            self._mtime = atual
+        return self._wb
+
     def _carregar(self):
-        return load_workbook(self.path)
+        return self._get_wb()
 
     def _salvar(self, wb):
         wb.save(self.path)
+        self._mtime = self.path.stat().st_mtime
 
     # ----- Marcacoes -----
 
     def listar_marcacoes(self):
         if not self.path.exists():
             return {}
-        wb = load_workbook(self.path, read_only=True)
+        wb = self._get_wb()
         if SHEET_MARCACOES not in wb.sheetnames:
             return {}
         out = {}
@@ -404,14 +424,12 @@ class ExcelStore:
             if valores[0]:
                 rows.append(valores)
         rows.sort(key=lambda r: parse_data(r[0]) or date.min)
-        for r in range(2, ws.max_row + 2):
-            for c in range(1, 4):
-                cell = ws.cell(row=r, column=c)
-                cell.value = None
-                cell.fill = PatternFill()
-                cell.font = Font()
-                cell.border = Border()
-                cell.alignment = Alignment()
+        # Apagar as linhas de dados de fato (delete_rows) em vez de so esvaziar:
+        # o clear antigo percorria max_row+1, materializando uma celula nova a
+        # cada save -> max_row crescia infinitamente (milhares de linhas-fantasma
+        # estilizadas incharam o arquivo e deixaram o load lento).
+        if ws.max_row >= 2:
+            ws.delete_rows(2, ws.max_row - 1)
         for i, vals in enumerate(rows, 2):
             for c, v in enumerate(vals, 1):
                 cell = ws.cell(row=i, column=c, value=v)
@@ -446,9 +464,10 @@ class ExcelStore:
         wb = self._carregar()
         ws = self._garantir_aba_mes(wb, data.year, data.month)
         self._gravar_linha_dia(ws, data, inicio, ini_pausa, fim_pausa, fim, tipo, obs)
-        for name in list(wb.sheetnames):
-            if re.match(r"^\d{4}-\d{2}$", name):
-                self._reordenar_aba_mes(wb[name])
+        # So a aba do mes afetado muda ao gravar um dia — reordenar TODAS as
+        # abas de mes a cada save custava ~8s (era o gargalo do "Finalizar").
+        # As demais ja estao ordenadas/estilizadas de gravacoes anteriores.
+        self._reordenar_aba_mes(ws)
         self._atualizar_resumo(wb)
         self._salvar(wb)
 
@@ -517,14 +536,11 @@ class ExcelStore:
             if valores[0] and str(valores[0]).strip() != "Total":
                 rows.append(valores)
         rows.sort(key=lambda r: parse_data(r[0]) or date.min)
-        for r in range(2, ws.max_row + 2):
-            for c in range(1, len(HEADERS_DIA) + 1):
-                cell = ws.cell(row=r, column=c)
-                cell.value = None
-                cell.fill = PatternFill()
-                cell.font = Font()
-                cell.border = Border()
-                cell.alignment = Alignment()
+        # Apagar as linhas de fato (delete_rows) em vez de so esvaziar — ver
+        # nota em _reordenar_marcacoes: o clear antigo inflava max_row a cada
+        # save, gerando milhares de linhas-fantasma.
+        if ws.max_row >= 2:
+            ws.delete_rows(2, ws.max_row - 1)
         cores_tipo = {
             "FERIADO": "FFD8A8",
             "ATESTADO": "FFC9C9",
@@ -590,7 +606,7 @@ class ExcelStore:
     def listar_meses(self):
         if not self.path.exists():
             return []
-        wb = load_workbook(self.path, read_only=True)
+        wb = self._get_wb()
         out = []
         for name in wb.sheetnames:
             if re.match(r"^\d{4}-\d{2}$", name):
@@ -601,7 +617,7 @@ class ExcelStore:
     def listar_dias_do_mes(self, ano, mes):
         if not self.path.exists():
             return []
-        wb = load_workbook(self.path, read_only=True)
+        wb = self._get_wb()
         nome = f"{ano:04d}-{mes:02d}"
         if nome not in wb.sheetnames:
             return []
@@ -645,14 +661,10 @@ class ExcelStore:
             self._setup_header(ws, HEADERS_RESUMO, [12, 18, 16, 14, 16, 18])
         else:
             ws = wb[SHEET_RESUMO]
-            for r in range(2, ws.max_row + 2):
-                for c in range(1, len(HEADERS_RESUMO) + 1):
-                    cell = ws.cell(row=r, column=c)
-                    cell.value = None
-                    cell.fill = PatternFill()
-                    cell.font = Font()
-                    cell.border = Border()
-                    cell.alignment = Alignment()
+            # Apagar as linhas de fato (delete_rows) em vez de so esvaziar — ver
+            # nota em _reordenar_marcacoes.
+            if ws.max_row >= 2:
+                ws.delete_rows(2, ws.max_row - 1)
         meses = []
         for name in wb.sheetnames:
             if re.match(r"^\d{4}-\d{2}$", name):
